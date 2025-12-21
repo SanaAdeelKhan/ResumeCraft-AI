@@ -1,53 +1,58 @@
 import os
-import requests
+import openai  # We'll assume Novita API works like OpenAI API
+import markdown
 
-API_KEY = os.getenv("NOVITA_API_KEY")
+# ✅ Use your Novita API key from .env or environment variables
+NOVITA_API_KEY = os.getenv("NOVITA_API_KEY")
+openai.api_key = NOVITA_API_KEY
 
-API_URL = "https://api.novita.ai/v1/chat/completions"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+md_path = os.path.join(BASE_DIR, "docs", "content.md")
+html_path = os.path.join(BASE_DIR, "docs", "index.html")
+css_path = os.path.join(BASE_DIR, "docs", "style.css")
 
-HEADERS = {
-    "Authorization": f"Bearer {API_KEY}",
-    "Content-Type": "application/json"
+# Read Markdown
+with open(md_path, "r", encoding="utf-8") as f:
+    md_text = f.read()
+
+# Convert to basic HTML
+html_body = markdown.markdown(md_text)
+
+# Example CSS (you can enhance)
+css_content = """
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    max-width: 900px;
+    margin: auto;
+    padding: 40px;
+    background-color: #f5f5f5;
+    color: #333;
 }
-
-PROMPT_TEMPLATE = """
-You are a professional web portfolio designer.
-
-Transform the following resume content into a modern, elegant,
-single-page personal website with:
-
-- Hero section (name + tagline)
-- About Me
-- Skills
-- Experience
-- Projects
-- Contact section
-
-Use clean Markdown.
-
-Resume Content:
-{content}
+h1, h2 {
+    color: #1a73e8;
+}
 """
 
-def generate_portfolio(md_content):
-    payload = {
-        "model": "ernie-4.5",
-        "messages": [
-            {"role": "user", "content": PROMPT_TEMPLATE.format(content=md_content)}
-        ]
-    }
+# Wrap HTML body in a basic template
+html_template = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ResumeCraft-AI</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+{html_body}
+</body>
+</html>
+"""
 
-    response = requests.post(API_URL, headers=HEADERS, json=payload)
-    response.raise_for_status()
-    return response.json()["choices"][0]["message"]["content"]
+# Save files
+with open(html_path, "w", encoding="utf-8") as f:
+    f.write(html_template)
 
-if __name__ == "__main__":
-    with open("../web/content.md", encoding="utf-8") as f:
-        md = f.read()
+with open(css_path, "w", encoding="utf-8") as f:
+    f.write(css_content)
 
-    refined = generate_portfolio(md)
-
-    with open("../web/content.md", "w", encoding="utf-8") as f:
-        f.write(refined)
-
-    print("✅ ERNIE portfolio content generated")
+print(f"✅ Website generated at {html_path} with CSS")
